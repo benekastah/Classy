@@ -1,0 +1,56 @@
+<html>
+	<head>
+		<title>Ham</title>
+	
+		<script src="classy.js" type="text/javascript"></script>
+	</head>
+	
+	<body>
+		<h1>New Ham</h1>
+		
+		<script type="text/javascript">
+			
+			var Person = Class.create({
+				a: 'a',
+				b: 'b',
+				rock: function(msg) {
+					msg = msg || "yo";
+					console.log("Rock "+msg+"!");
+				}
+			});
+			
+			var Ninja = Person.extend({
+				_init: function() {
+					console.log('init');
+					//this._super();
+				},
+				
+				rock: function() {
+					this._super("on");
+					console.log("And rock harder!");
+				}
+			}, function() {
+				this.THING = function() { console.log("lalalalalala"); };
+			});
+			
+			var Super = Person.extend(function() {
+				this.rock = function() {
+					this._super(this._context);
+					console.log("Rock again!!");
+				},
+				this.a = 'a';
+			})
+				.statics({
+					goCrasy: function() {
+						console.log("GO CRASY!");
+					}
+				});
+			
+			var jim = new Person();
+			var ryu = new Ninja();
+			var superman = new Super();
+			
+		</script>
+		
+	</body>
+</html>
