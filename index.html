@@ -9,7 +9,6 @@
 		<h1>New Ham</h1>
 		
 		<script type="text/javascript">
-			Class.noNew(true);
 			
 			var Person = Class.create({
 				a: 'a',
@@ -17,6 +16,14 @@
 				rock: function(msg) {
 					msg = msg || "yo";
 					console.log("Rock "+msg+"!");
+				},
+				freakOut: function() {
+					console.log("freak out!@!!");
+				}
+			})
+			.statics({
+				goCrasy: function() {
+					console.log("CRASSSSSY!!!!");
 				}
 			});
 			
@@ -29,9 +36,23 @@
 				rock: function() {
 					this._super("on");
 					console.log("And rock harder!");
+				},
+				
+				ninja: "ninja",
+				
+				freakOut: function() {
+					console.log("FREAK OUT!!!");
 				}
-			}, function() {
-				this.THING = function() { console.log("lalalalalala"); };
+			})
+			.shared({
+				horrowitz: "Horrowitz!!"
+			});
+				
+			var DoubleDragon = Ninja.extend({})
+			.shared({
+				freakOut: function() {
+					this._super();
+				}
 			});
 			
 			var Super = Person.extend(function() {
@@ -40,15 +61,17 @@
 					console.log("Rock again!!");
 				},
 				this.a = 'a';
-			})
-				.statics({
-					goCrasy: function() {
-						console.log("GO CRASY!");
-					}
-				});
+			});
+			.statics({
+				goCrasy: function() {
+					console.log("GO CRASY!");
+					this._super();
+				}
+			});
 			
 			var jim = Person();
-			var ryu = Ninja();
+			var ryu = new Ninja();
+			var kenshin = DoubleDragon._new();
 			var superman = new Super();
 			
 		</script>
