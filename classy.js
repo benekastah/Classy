@@ -1,64 +1,118 @@
-function Class() {
+var Class = new (function() {
 	"use strict";
 	
-	function classMethod(constructor, name, fn) {
-		var args = arguments,
-		ret;
+	// Private vars
+	// Our class constructor
+	var Class;
 	
-		this._super = function() {
-			if (typeof constructor.prototype[name] !== "function")
-				throw new TypeError("There is no super function for " + name);
-			if (arguments[0] === this._context)
-				constructor.prototype[name].apply(constructor.prototype, args);
-			else
-				constructor.prototype[name].apply(constructor.prototype, arguments);
-		}
-		this._context = { execute_in_context: true }; // Use an arbitrary object for our token
+	function createClassMethod(name, fn) {
+		var classMethod = function() {
+			var args = arguments,
+			ret;
 	
-		ret = fn.apply(this, args);
-		delete this._super; delete this._context;
-		return ret;
+			this._super = function() {
+				if (typeof Class.prototype[name] !== "function")
+					throw new TypeError("There is no super function for " + name);
+				if (arguments[0] === this._context)
+					Class.prototype[name].apply(Class.prototype, args);
+				else
+					Class.prototype[name].apply(Class.prototype, arguments);
+			}
+			this._context = { execute_in_context: true }; // Use an arbitrary object for our token
+	
+			ret = classMethod.fn.apply(this, args);
+			delete this._super; delete this._context;
+			return ret;
+		};
+		classMethod.fn = fn;
+		
+		return classMethod;
 	}
 	
-	this.create: function(objOrConstructor, prototype, statics) {
+	// Needs to have its scope specified. Call like makeProperty.call(this, args, go, here) or makeProperty.apply(this, [args, go, here])
+	function makeProperty(sourceObj, property) {
+		if (typeof sourceObj[property] === "function") {
+				// Create wrapper function for function calls
+				this[property] = createClassMethod(property, sourceObj[property]);
+			} else
+				this[property] = sourceObj[property];
+	}
+	
+	// Public properties
+	this.noNew = function() {
+		if (arguments[0] != null)
+			noNew = arguments[0];
+		return noNew;
+	};
+	var noNew = false;
+	
+	this.create = function(objOrConstructor, prototype, statics) {
 		
 		var noInit = { noInit: true };
 		// Make our constructor fn
-		var constructor = function() {
-			var _this;
+		Class = function() {
+			var obj, _this;
 			
-			if (!(this instanceof constructor))
-				throw "Must use new when instantiating constructor.";
+			if (noNew)
+				_this = {};
+			else
+				_this = this;
+			
+			if (this === window && noNew)
+				throw "Must use new when instantiating a class.";
 			
 			if (typeof objOrConstructor === "function")
-				_this = new objOrConstructor();
+				obj = new objOrConstructor();
 			else
-				_this = objOrConstructor;
+				obj = objOrConstructor;
 		
 			for (var i in _this) {
-				if (_this.hasOwnProperty(i)) {
-					if (typeof _this[i] === "function") {
-						// Create wrapper function for function calls
-						this[i] = classMethod(constructor, i, _this[i]);
-					} else 
-						this[i] = _this[i];
+				if (obj.hasOwnProperty(i)) {
+					makeProperty.call(_this, obj, i);
 				}
 			}
 			
 			// Make static properties
-			constructor.statics(statics);
+			Class.statics(statics);
+			
+			// Give some properties for free
+			this._implement = function(objOrConstructorOrPropName, value) {
+				var type = typeof objOrConstructorOrPropName;
+				if (type === "string") {
+					obj = {};
+					obj[objOrConstructorOrPropName] = value;
+				} else if (type === "function")
+					obj = new objOrConstructorOrPropName();
+				else
+					obj = objOrConstructorOrPropName;
+				
+				for (var i in obj) {
+					if (obj.hasOwnProperty(i)) {
+						if (typeof obj[i] === "function") {
+							if (typeof _this[i] === "function")
+								_this[i].fn = obj[i];
+							else
+								_this[i] = createClassMethod.call(_this, i, obj[i]);
+						} else
+							_this[i] = obj[i];
+					}
+				}
+			};
 			
 			// Initialize our function
-			if (typeof this._init === "function" && arguments[0] !== noInit)
-				this._init.apply(this, arguments);
+			if (typeof _this._init === "function" && arguments[0] !== noInit)
+				_this._init.apply(_this, arguments);
+			
+			if (noNew)
+				return _this;
 		};
 	
 		// Classes methods
-		constructor.extend = function(objOrConstructor, statics) {
-			return Class.create(objOrConstructor, this, statics);
+		Class.extend = function(objOrConstructor, statics) {
+			return window.Class.create(objOrConstructor, this, statics);
 		};
 		
-		constructor.statics = function(objOrConstructor) {
+		Class.statics = function(objOrConstructor) {
 			var all = arguments.length,
 			args = [];
 			for (var i=0; i < all; i++) {
@@ -71,18 +125,26 @@ function Class() {
 				var statics = objOrConstructor;
 				
 			for (i in statics) {
-				constructor[i] = statics[i];
+				Class[i] = statics[i];
 			}
 			
-			return constructor;
+			return Class;
 		};
+		
+		Class._new = function() {
+			var ret = new this(noInit);
+			if (typeof ret._init === "function")
+				ret._init.apply(this, arguments);
+			return ret;
+		}
+		
+		Class.New = Class._new;
 	
 		// Finish up with the prototype stuff
 		if (typeof prototype === "function")
 			prototype = new prototype(noInit); // Will not initialize
-		constructor.prototype = prototype || {};
-		constructor.prototype.constructor = constructor;
-		return constructor;
+		Class.prototype = prototype || {};
+		Class.prototype.constructor = Class;
+		return Class;
 	}
-	
-})();
+});
