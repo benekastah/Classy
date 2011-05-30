@@ -97,6 +97,8 @@ var Class = new (function() {
 							_this[i] = obj[i];
 					}
 				}
+				
+				return _this;
 			};
 			
 			// Initialize our function
