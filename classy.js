@@ -58,7 +58,7 @@ var Class = new (function() {
 			else
 				_this = this;
 			
-			if (this === window && noNew)
+			if (this === window && !noNew)
 				throw "Must use new when instantiating a class.";
 			
 			if (typeof objOrConstructor === "function")
@@ -66,7 +66,7 @@ var Class = new (function() {
 			else
 				obj = objOrConstructor;
 		
-			for (var i in _this) {
+			for (var i in obj) {
 				if (obj.hasOwnProperty(i)) {
 					makeProperty.call(_this, obj, i);
 				}
