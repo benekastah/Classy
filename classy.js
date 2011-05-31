@@ -44,10 +44,16 @@ var Class = new (function() {
 					return prototype[name].apply(Class.prototype, arguments);
 			}
 			this._context = { use_context: true }; // Use an arbitrary object for our token
-			this._priv = privates;
+			this._private = privates;
 	
 			ret = classMethod.fn.apply(this, args);
-			delete this._super; delete this._context;
+
+			// Delete the properties we created for the method being called.
+			delete this._super;
+			delete this._context;
+			delete this._private;
+
+			// Return result of function
 			return ret;
 		};
 		classMethod.fn = fn;
