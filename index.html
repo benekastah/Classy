@@ -10,69 +10,164 @@
 		
 		<script type="text/javascript">
 			
-			var Person = Class.create({
-				a: 'a',
-				b: 'b',
-				rock: function(msg) {
-					msg = msg || "yo";
-					console.log("Rock "+msg+"!");
-				},
-				freakOut: function() {
-					console.log("freak out!@!!");
+			var Person = Class.create().privates({
+				social: "XXX-XX-XXXX"
+			})
+			.locals({
+				getSocial: function() {
+					console.log(this._priv.social);
 				}
 			})
+			.shared({
+				order: "humanity"
+			})
 			.statics({
-				goCrasy: function() {
-					console.log("CRASSSSSY!!!!");
+				isPerson: function(obj) {
+					return obj === this || obj instanceof this;
 				}
 			});
+			
+			var jim = new Person();
+			var drake = new Person();
 			
 			var Ninja = Person.extend({
-				_init: function() {
-					console.log('init');
-					//this._super();
+				weapon: "Ninja star",
+				kill: function() {
+					console.log("Ninja killed with " + this.weapon + " in the " + this._priv.location);
 				},
-				
-				rock: function() {
-					this._super("on");
-					console.log("And rock harder!");
-				},
-				
-				ninja: "ninja",
-				
-				freakOut: function() {
-					console.log("FREAK OUT!!!");
+				privates: {
+					location: "White House"
 				}
 			})
 			.shared({
-				horrowitz: "Horrowitz!!"
-			});
-				
-			var DoubleDragon = Ninja.extend({})
-			.shared({
-				freakOut: function() {
-					this._super();
-				}
-			});
-			
-			var Super = Person.extend(function() {
-				this.rock = function() {
-					this._super(this._context);
-					console.log("Rock again!!");
-				},
-				this.a = 'a';
-			});
+				order: "Ninjas United"
+			})
 			.statics({
-				goCrasy: function() {
-					console.log("GO CRASY!");
-					this._super();
+				isPerson: function(obj) {
+					return this._super(this._context);
+				},
+			
+				isNinja: function(obj) {
+					return Person.isPerson.call(this, obj);
 				}
 			});
 			
-			var jim = Person();
 			var ryu = new Ninja();
-			var kenshin = DoubleDragon._new();
-			var superman = new Super();
+			var kenshin = new Ninja();
+			
+			var DoubleDragon = Ninja.extend(function() {
+				var hp;	
+				
+				this._init = function(config) {
+					this.powers = config.powers;
+					this.hp = config.hp;
+					this.strength = config.strength;
+					this.defense = config.defense;
+					this.quickness = config.quickness;
+					this.name = config.name;
+					this.dead = false;
+				};
+				
+				this.attacks = function(fighter) {
+					if (this.dead) {
+						console.log(this.name + " can't attack because he is dead.");
+						return;
+					}
+					
+					console.log(this.name + " uses his " + 
+						this.powers[Math.round(Math.random() * this.powers.length)] + " power to attack " + 
+						fighter.name + ".");
+					
+					var damageTaken = fighter.defends(this);
+					
+					console.log(this.name + " takes " + damageTaken + " damage!");
+					
+					damageTaken = Math.max(damageTaken, 0);
+					this.hp -= damageTaken;
+					
+					console.log(
+						this.name + ": " + this.hp + " hp\n" +
+						fighter.name + ": " + fighter.hp + " hp"
+					);
+					
+					if (this.hp <= 0)
+						this.die();
+					else if (fighter.dead)
+						this.win();
+				}
+				
+				this.defends = function(fighter) {
+					if (this.dead) {
+						console.log(this.name + " can't defend because he is dead.");
+						fighter.win();
+						return 0;
+					}
+					
+					var damageDealt = 0;
+					var damageTaken = 0;
+					if (fighter.quickness > this.quickness)
+						damageTaken += fighter.quickness - this.quickness;
+					else
+						damageDealt += Math.round((this.quickness - fighter.quickness) / 2);
+					if (fighter.strength > this.strength)
+						damageTaken += fighter.strength - this.strength;
+					else
+						damageDealt += this.strength - fighter.strength;
+					if (this.defense > fighter.strength)
+						damageTaken -= this.defense - fighter.strength;
+					
+					damageTaken = Math.max(damageTaken, 0);
+					this.hp -= damageTaken;
+					console.log(this.name + " defends himself against " + 
+						fighter.name + "'s attack and takes " + 
+						damageTaken + " damage.");
+					
+					if (this.hp <= 0)
+						this.die();
+					else if (fighter.dead)
+						this.win();
+					return damageDealt;
+				}
+				
+				this.die = function() {
+					console.log(this.name + " died from his battle wounds.");
+					this.dead = true;
+				}
+				
+				this.win = function() {
+					console.log(this.name + " wins!!");
+				}
+			});
+			
+			var configPaul = {
+				powers: [
+					"whirlwind",
+					"death kick",
+					"fists of fury"
+				],
+				hp: 100 + Math.floor(Math.random() * 100),
+				strength: 50 + Math.floor(Math.random() * 75),
+				quickness: 65 + Math.floor(Math.random() * 105),
+				defense: 225 + Math.floor(Math.random() * 45),
+				name: "gZorgSpaceKick"
+			};
+			
+			var paul = new DoubleDragon(configPaul);
+			
+			var configBilly = {
+				powers: [
+					"jelly roll",
+					"cream shilling fist",
+					"unheard of"
+				],
+				hp: 100 + Math.floor(Math.random() * 100),
+				strength: 50 + Math.floor(Math.random() * 75),
+				quickness: 65 + Math.floor(Math.random() * 105),
+				defense: 225 + Math.floor(Math.random() * 45),
+				name: "Blank Death"
+			};
+			
+			var billy = new DoubleDragon(configBilly);
 			
 		</script>
 		

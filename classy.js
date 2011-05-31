@@ -20,7 +20,7 @@ var Class = new (function() {
 		return ret;
 	};
 	
-	priv.createClassMethod = function(name, fn, prototype) {
+	priv.createClassMethod = function(name, fn, prototype, privates) {
 		var prototype = prototype || Class.prototype;
 		var classMethod = function() {
 			var args = arguments,
@@ -39,11 +39,12 @@ var Class = new (function() {
 						arr.push.call(args, arguments[i]);
 					
 					// Use args instead of arguments so that we use createClassMethod's arguments
-					prototype[name].apply(prototype, args);
+					return prototype[name].apply(prototype, args);
 				} else
-					prototype[name].apply(Class.prototype, arguments);
+					return prototype[name].apply(Class.prototype, arguments);
 			}
 			this._context = { use_context: true }; // Use an arbitrary object for our token
+			this._priv = privates;
 	
 			ret = classMethod.fn.apply(this, args);
 			delete this._super; delete this._context;
@@ -57,18 +58,17 @@ var Class = new (function() {
 	priv.createProperty = function(toObj, sourceObj, property, prototype) {
 		if (typeof sourceObj[property] === "function") {
 			// Create wrapper function for function calls
-			toObj[property] = priv.createClassMethod(property, sourceObj[property], prototype);
-		} else
+			toObj[property] = priv.createClassMethod(property, sourceObj[property], prototype, sourceObj.privates);
+		} else if (property !== 'privates')
 			toObj[property] = sourceObj[property];
 		return toObj;
 	};
 	
-	priv.createClassConstructor = function(objOrConstructor) {
+	priv.createClassConstructor = function(locals) {
 		Class = function() {
 			var _this = this;
-			//var _this = {};
 			
-			priv.buildPropertiesFromObj(_this, objOrConstructor);
+			priv.buildPropertiesFromObj(_this, locals);
 			
 			// Give some properties for free
 			priv.buildFreeProperties(_this);
@@ -76,8 +76,6 @@ var Class = new (function() {
 			// Initialize our function
 			if (typeof _this._init === "function" && arguments[0] !== this.noInit)
 				_this._init.apply(_this, arguments);
-			
-			//return _this;
 		};
 		return Class;
 	};
@@ -147,7 +145,7 @@ var Class = new (function() {
 		return ret;
 	}
 	
-	this.create = function(objOrConstructor, prototype, statics) {
+	this.create = function(objOrConstructor, prototype) {
 		
 		var statics,
 		protoConstructor,
@@ -158,11 +156,14 @@ var Class = new (function() {
 			proto = new prototype(this.noInit);
 		} else {
 			protoConstructor = null;
-			proto = prototype;
+			proto = prototype || {};
 		}
 		
 		// Make our constructor fn
-		Class = priv.createClassConstructor(objOrConstructor || {});
+		if (objOrConstructor)
+			Class = priv.createClassConstructor(objOrConstructor);
+		else
+			Class = {};
 		
 		// Build prototype of Class
 		//var proto = priv.determineObject(prototype, this.noInit);
@@ -176,36 +177,32 @@ var Class = new (function() {
 		
 		// The class itself has the methods and properties created here
 		Class.statics = function(objOrConstructor) {
-			if (!statics) {
-				var staticsConstructor = function(_this, objOrConstructor, prototype) {
-					var obj = priv.determineObject(objOrConstructor);
-					priv.buildPropertiesFromObj(_this, obj, null, prototype);
-					return _this;
-				}
-				if (typeof prototype === "function")
-					staticsConstructor.prototype = prototype;
-				else
-					staticsConstructor.prototype = function() {};
-				staticsConstructor.prototype.constructor = staticsConstructor;
-				
-				statics = new staticsConstructor(Class, objOrConstructor, prototype);
-			} else
-				priv.buildPropertiesFromObj(Class, objOrConstructor);
+			priv.buildPropertiesFromObj(Class, objOrConstructor, null, 
+				(protoConstructor || proto.constructor || function() {}) ); // The last arg is the prototype
 			return Class;
 		};
 		
 		Class.shared = function(objOrConstructorOrProperty, valueOrNull) {
-			var protosPrototype = (protoConstructor || {}).prototype || proto.constructor.prototype;
+			var protosPrototype = (protoConstructor) ? protoConstructor.prototype : proto.constructor.prototype;
 			priv.buildPropertiesFromObj(proto, objOrConstructorOrProperty, valueOrNull, protosPrototype);
 			return Class;
 		};
 		
-		Class.privates;
+		var privates = {};
+		Class.privates = function(objOrConstructorOrProperty, valueOrNull) {
+			privates = priv.determineObject(objOrConstructorOrProperty, valueOrNull);
+			return Class;
+		};
 		
-		Class.locals;
+		Class.locals = function(objOrConstructorOrProperty, valueOrNull) {
+			locals = priv.determineObject(objOrConstructorOrProperty, valueOrNull);
+			locals.privates = privates;
+			Class = scope.create(locals, prototype);
+			return Class;
+		};
 		
 		Class._new = function() {
-			var ret = new this(this.noInit);
+			var ret = new this(scope.noInit);
 			if (typeof ret._init === "function")
 				ret._init.apply(this, arguments);
 			return ret;
@@ -213,7 +210,7 @@ var Class = new (function() {
 		
 		Class.New = Class._new;
 		
-		// This line returns Class and also makes sure it inherits its parent's classOnly functions
-		return Class.statics({});
+		// This line returns Class and also makes sure it inherits its parent's class only functions
+		return Class;//.statics({});
 	}
 });
