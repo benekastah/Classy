@@ -1,0 +1,71 @@
+<html>
+	<head>
+		<title>Ham</title>
+	
+		<script src="classy.js" type="text/javascript"></script>
+	</head>
+	
+	<body>
+		<h1>New Ham</h1>
+		
+		<script type="text/javascript">
+			
+			var Person = Class.create({
+				initialize: function(config) {
+					config = config || {};
+					this.social = config.social;
+					this.name = config.name;
+				},
+				
+				battleCry: "Yargh!?"
+			});
+			
+			var Warrior = Module(function(config) {
+				config = config || {};
+				this.weapon = config.weapon;
+				this.battleCry = config.battleCry;
+				this.strength = config.strength;
+				
+				this.kill = function(name) {
+					return (name || this.type || "Warrior") + " screams " + this.battleCry + " and kills mercilessly with his " + this.weapon;
+				};
+			});
+			
+			var Ninja = Person.extend({
+				initialize: function(config) {
+					config.social = null;
+					this._.supr(config);
+				},
+				
+				kill: function() {
+					return this._.supr(this.name);
+				}
+			}).mixin(Warrior, {
+				type: "Ninja",
+				weapon: "acupuncture needles",
+				strength: Infinity,
+				battleCry: "HAIYA!"
+			});
+			
+			var DoubleDragon = Ninja.extend()
+			.privates({
+				a: 'a'
+			})
+			.locals({
+				name: null,
+ function() {console.log(this._.a)}
+			})
+			.shared({
+				type: "DoubleDragon",
+				battleCry: "Grizzle"
+			})
+			.statics({
+				destroyTheWorld: function() {
+					console.log("All the DoubleDragon's are destroying the world at once!!!");
+				}
+			});
+			
+		</script>
+		
+	</body>
+</html>
