@@ -105,7 +105,8 @@ var Class = new (function() {
 		function mountPrivateProperties(privates) {
 		   for (var i in privates) {
 		      if (this.hasOwnProperty(i)) {
-		         this["_" + i] = privates[i];
+		         if (this["_" + i] == undefined)
+		            this["_" + i] = privates[i];
 		      }
 		   }
 		}
@@ -125,7 +126,8 @@ var Class = new (function() {
 		function mountSharedProperties(shared, prototype) {
 		   for (var i in prototype) {
 		      if (prototype.hasOwnProperty(i)) {
-		         this["$" + i] = prototype[i];
+		         if (this['$' + i] == undefined)
+		            this["$" + i] = prototype[i];
 		      }
 		   }
 		}
@@ -145,7 +147,8 @@ var Class = new (function() {
 		function mountStaticProperties(statics) {
 		   for (var i in statics) {
 		      if (this.constructor.hasOwnProperty(i)) {
-		         this["$$" + i] = this.constructor[i];
+		         if (this["$$" + i] == undefined)
+		            this["$$" + i] = this.constructor[i];
 		      }
 		   }
 		}
