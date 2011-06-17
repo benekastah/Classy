@@ -1,0 +1,106 @@
+Harness the power of JavaScripts slightly funky prototypal inheritance without the worries. See for yourself:
+
+// Inheritance and super-functions
+    // Class defined through constructor function
+    var Person = Class.create(function () {
+        this.initialize = function() {
+            // automatically called when new instance is made
+            console.log("Whatever...");
+        };
+        
+        this.walk = function() {
+            console.log("Walking...");
+        };
+        
+    });
+    
+    // Class defined through object literal
+    var Ninja = Person.extend({
+        walk: function() {
+            this._supr();
+            console.log("Ninja style!");
+        }
+    });
+
+    var jim = new Person();
+    var ryu = new Ninja();
+
+// Private, shared and static variables
+    var DoubleDragon = Ninja.extend({
+        
+        // Of course you could always define your class with a constructor function and use local variables for this
+        // But this is still cool, and useful if you want to write your classes with object literals
+        // _ is an object that holds private variables
+        _ : {
+            stealthiness: "over 9000!!!",
+            etc: "you get the point"
+        },
+
+        // $ refers to shared variables (i.e. attached to the object's prototype)
+        $ : {
+            wearsMask: true
+        },
+        
+        // $$ refers to static variables (i.e. attached to the objects constructor)
+        $$ : {
+            unite: function() {
+                console.log("DoubleDragons UNITE!");
+            }
+        },
+        
+        // Of course, why stop there? It's a bit less performant, but you can prefix any variable with _, $ or $$ and they will be added to the proper spots automatically (as if they were in the objects)
+        _pinNumber: 'xxxx',
+        $hasFancyBoots: false,
+        $$beAwesome: "be awesome"
+
+        normalMethod: function() {
+            // The only place these symbols can be used outside of declaring the class is in methods of the class that are attached to 'this'
+            // These values are automatically 'mounted' to the 'this' object when the function is run, and unloaded when the function is through
+            $$unite();
+            _stealthiness = "over 10000!!!";
+            $hasFancyBoots = true;
+            console.log("DoubleDragons the world over gained fancy boots!");
+        }
+        
+    });
+
+// There is more than one way to do the same thing:
+    var Superhero = DoublDragon.extend()
+    .privates({ /* private vars here */ })
+    .shared({ /* shared vars here */ })
+    .statics({ /* you get the point */ });
+
+
+
+There are also some really handy extras in the Classy toolbelt.
+
+If all you need is a very simple class, you have this:
+    Class.simple(/* object literal or constructor function */, /* prototype (optional) */);
+
+Keep in mind that you can't call this._supr() and this.initialize() won't be automatically called on instantiation with Class.simple().
+
+For multiple inheritance, Mixers are provided.
+    // Pass in constructor function or object literal. Functions are more performant here (slightly -- the smaller the object the less it matters).
+    var NinjaStarWielder = Mixer(function () {
+        this.wield = function() { /* ... */ }
+        /* ... */
+    });
+
+    Ninja.mixin(NinjaStarWielder, config); // config is an object literal with whatever values you need
+    
+    // or simply:
+    
+    DoubleDragon.mixin({ /* obj literal or constructor fn  */, config }
+
+    // or:
+
+    NinjaStarWielder.mixto(Person.prototype, config)
+
+    // finally, get a mixer as a standalone object:
+    
+    var nsw = NinjaStarWielder.make();
+
+Sometimes, you only need one instance of a class, even though other classes can still inherit from it and whatnot. So...
+
+    // Returns an object, not a class.
+    Singleton({ /* do everything else the same as with Class.create() */ })
