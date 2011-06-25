@@ -22,6 +22,8 @@ var Mixer = function(objOrConstructor) {
 		return ret;
 	};
 	
+	mixer.constructor = Mixer;
+	
 	return mixer;
 };
 
@@ -89,17 +91,18 @@ var Class = new (function() {
 		
 		return classMethod;
 		
+		// Not mounting static and shared properties in favor of $ and $$ object aliases
 		function mountSpecialProperties(prototype, privates, shared, statics) {
 		   mountPrivateProperties.call(this, privates);
-		   mountSharedProperties.call(this, shared, prototype);
-		   mountStaticProperties.call(this, statics);
+		   //mountSharedProperties.call(this, shared, prototype);
+		   //mountStaticProperties.call(this, statics);
 		}
 		
 		function unmountSpecialProperties(prototype, privates, shared, statics) {
 		   // Order matters
 		   unmountPrivateProperties.call(this, privates);
-		   unmountStaticProperties.call(this, statics);
-		   unmountSharedProperties.call(this, shared, prototype);
+		   //unmountStaticProperties.call(this, statics);
+		   //unmountSharedProperties.call(this, shared, prototype);
 		}
 		
 		function mountPrivateProperties(privates) {
@@ -115,19 +118,23 @@ var Class = new (function() {
 		   for (var i in this) {
 		      if (this.hasOwnProperty(i)) {
 		         var new_i;
-		         if ((new_i = i.replace(/^_/, '')) !== i) {
+		         if (privates && (new_i = i.replace(/^_/, '')) !== i) {
 		            privates[new_i] = this[i];
 		            delete this[i];
 		         }
 		      }
 		   }
 		}
-		
+		/*
 		function mountSharedProperties(shared, prototype) {
 		   for (var i in prototype) {
 		      if (prototype.hasOwnProperty(i)) {
-		         if (this['$' + i] == undefined)
-		            this["$" + i] = prototype[i];
+		         if (this['$' + i] == undefined) {
+		            var val = prototype[i];
+		            if (typeof val === "function")
+		               val = val.bind(prototype);
+		            this["$" + i] = val;
+		         }
 		      }
 		   }
 		}
@@ -145,10 +152,14 @@ var Class = new (function() {
 		}
 		
 		function mountStaticProperties(statics) {
-		   for (var i in statics) {
+		   for (var i in this.constructor) {
 		      if (this.constructor.hasOwnProperty(i)) {
-		         if (this["$$" + i] == undefined)
+		         if (this["$$" + i] == undefined) {
+		            var val = this.constructor[i];
+		            if (typeof val === "function")
+		               val = val.bind(this.constructor);
 		            this["$$" + i] = this.constructor[i];
+		         }
 		      }
 		   }
 		}
@@ -164,16 +175,16 @@ var Class = new (function() {
 		      }
 		   }
 		}
-		
+		//*/
 	};
 	
 	priv.createProperty = function(toObj, sourceObj, property, prototype) {
-	   var dontAdd = ['_', '$', '$$'];
+	   var dontAdd = ['_'];
 	   if (dontAdd.has(property)) return toObj;
 	   
-	   if (typeof sourceObj[property] === "function") {
+	   if (typeof sourceObj[property] === "function" && property !== "$$") {
 			// Create wrapper function for function calls
-		   toObj[property] = priv.createClassMethod(property, sourceObj[property], prototype, sourceObj._, sourceObj.$, sourceObj.$$);
+		   toObj[property] = priv.createClassMethod(property, sourceObj[property], prototype, sourceObj._);
 		} else
 		   toObj[property] = sourceObj[property];
 		
@@ -181,14 +192,11 @@ var Class = new (function() {
 	};
 	
 	priv.createClassConstructor = function(locals) {
-	   // Removing these for now, as I can't figure out a good way to use them in methods yet.
-	   //delete locals['$'];
-	   //delete locals['$$'];
-	   
-		Class = function() {
+	   Class = function() {
 			// Give some properties for free
 			priv.buildFreeProperties(this);
 			
+			locals.$$ = this.constructor;
 			priv.buildPropertiesFromObj(this, locals);
 			
 			// Initialize our function
@@ -216,7 +224,7 @@ var Class = new (function() {
 			
 			return _this;
 		};
-		
+		/*
 		_this.shared = function(prop, value) {
 		   // If we have more than 1 argument, value came in, and we should set
 			if (arguments.length > 1)
@@ -233,6 +241,7 @@ var Class = new (function() {
 			_this.constructor.shared(prop, value);
 			return _this;
 		}
+		//*/
 		
 		return _this;
 	};
@@ -309,8 +318,8 @@ var Class = new (function() {
 			protoConstructor = prototype;
 			proto = new prototype(scope.noInit);
 		} else {
-			protoConstructor = null;
 			proto = prototype || {};
+			protoConstructor = proto.constructor;
 		}
 		
 		var obj = priv.determineObject(objOrConstructor);
@@ -319,16 +328,16 @@ var Class = new (function() {
 		statics = priv.getPseudoObject(obj, "\\$\\$");
 		shared = priv.getPseudoObject(obj, "\\$");
 		
-		// Making this assignment after all the priv.getPseudoObject() calls above keeps a lot of confusion away.
 		obj._ = privates;
-		obj.$ = shared;
-		obj.$$ = statics;
+		obj.$ = proto;
 		
 		// Make our constructor fn
 		if (objOrConstructor)
 			Class = priv.createClassConstructor(obj);
 		else
 			Class = {};
+		
+		//obj.$$ = Class;
 		
 		// Build prototype of Class
 		Class.prototype = proto || {};
@@ -339,7 +348,11 @@ var Class = new (function() {
 			return scope.create(objOrConstructor, this);
 		};
 		
-		Class.mixin = function(mixer, config) {
+		Class.mixin = function(obj, config) {
+		   if (!obj.isMixer)
+		      mixer = Mixer(obj);
+		   else
+		      mixer = obj;
 			mixer.mixto(this.prototype, config);
 			return this;
 		};
